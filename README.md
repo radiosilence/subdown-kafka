@@ -1,13 +1,17 @@
 # subdown-kafka
 
-Project will be an API to download images from subreddits in parallel.
+Project will be an API to download images from subreddits in parallel using Java/Kotlin and Kafka
 
-This is a port of my existing project that I use to learn languages:
+This is a port of my existing project that I use to learn languages, but a bit more hardcore:
 
 https://github.com/radiosilence/subdown
 
 ## Skills to learn
 
+- How to set up an sort of Java/Kotlin project at all
+  - Gradle
+  - Kotlin
+  - Project structure
 - Setting up kafka
 - HTTP API making
 - JSON parsing
