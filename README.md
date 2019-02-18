@@ -6,6 +6,10 @@ This is a port of my existing project that I use to learn languages, but a bit m
 
 https://github.com/radiosilence/subdown
 
+## Current questions
+
+[Here are a bunch of questions I have](https://github.com/radiosilence/subdown-kafka/blob/master/QUESTIONS.md)
+
 ## Skills to learn
 
 - How to set up an sort of Java/Kotlin project at all
