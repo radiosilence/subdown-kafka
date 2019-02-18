@@ -10,7 +10,7 @@ https://github.com/radiosilence/subdown
 
 ### HTTP API
 
-Endpoints
+#### Endpoints
 
 - GET /status - reports current jobs, status, what it's doing, etc.
 - POST /spider - takes HTTP body `{ subreddit: string, maxPages: number }`
