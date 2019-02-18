@@ -1,6 +1,6 @@
 # subdown-kafka
 
-Project will be an API to download images from subreddits massively in parallel.
+Project will be an API to download images from subreddits in parallel.
 
 This is a port of my existing project that I use to learn languages:
 
