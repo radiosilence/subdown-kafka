@@ -6,13 +6,22 @@ This is a port of my existing project that I use to learn languages:
 
 https://github.com/radiosilence/subdown
 
+## Skills
+
+- HTTP API making
+- JSON parsing
+- Posting to Kafka
+- Consuming from Kafka
+- File system modification
+- Redis
+
 ## Architecture
 
-### HTTP API
+### HTTP API (Ratpack)
 
 #### Endpoints
 
-- GET /status - reports current jobs, status, what it's doing, etc.
+- GET /status - Queries redis to show statuses of last whatever jobs and returns JSON
 - POST /spider - takes HTTP body `{ subreddit: string, maxPages: number }`
   When this API is hit, it sends a message to the `spider` topic with format:
   { subreddit, maxPages, paginationToken (null in this case)}
@@ -20,16 +29,26 @@ https://github.com/radiosilence/subdown
 ### Consumer for `spider` topic
 
 1. Consumes messages from `spider`
-2. Does HTTP request to get the JSON
-3. if `pageNumber < maxPages`, posts message to `spider` with next page details
-4. For each link, posts message to `download` with the URL for that link
+2. Sends status for job as spidering
+3. Does HTTP request to get the JSON
+4. if `pageNumber < maxPages`, posts message to `spider` with next page details
+5. Sends status for job as complete
+6. For each link, posts message to `download` with the URL for that link
 
 ### Consumer for `download` topic
 
 1. Consumes messages from `download`
-2. Checks file doesn't exist with postId
-3. Downloads URL
-4. Sets downloaded file to have the modified time of the postedOn
+2. Sends status for job as downloading
+3. Checks file doesn't exist with postId
+4. Downloads URL
+5. Sends status for job as complete
+6. Sets downloaded file to have the modified time of the postedOn
+
+### Consumer for `status` topic
+
+1. Consumes messages from `status` topic
+2. If `job:{id}` does not exist, LPUSH jobId into `jobs`
+3. Set `job:{id}` to JSON dump of the status
 
 ## Topics / Messages
 
@@ -37,6 +56,7 @@ https://github.com/radiosilence/subdown
 
 ```ts
 {
+  jobId: string
   subreddit: string;
   pageNumber: number;
   maxPages: number;
@@ -48,8 +68,20 @@ https://github.com/radiosilence/subdown
 
 ```ts
 {
+  jobId: string;
   postId: string;
   url: string;
   postedOn: string;
+}
+```
+
+`status`
+
+```ts
+{
+  jobId: string;
+  jobType: "DOWNLOAD" | "SPIDER";
+  jobDescription: string;
+  status: string;
 }
 ```
