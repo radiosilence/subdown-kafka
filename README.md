@@ -6,8 +6,9 @@ This is a port of my existing project that I use to learn languages:
 
 https://github.com/radiosilence/subdown
 
-## Skills
+## Skills to learn
 
+- Setting up kafka
 - HTTP API making
 - JSON parsing
 - Posting to Kafka
