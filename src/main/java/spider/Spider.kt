@@ -1,9 +1,11 @@
 package spider
 
+import java.util.*
+
 data class Spider(
-    val jobId: String,
+    val jobId: UUID,
     val subreddit: String,
     val pageNumber: Number,
     val maxPages: Number,
-    val paginationToken: String
+    val paginationToken: String?
 )

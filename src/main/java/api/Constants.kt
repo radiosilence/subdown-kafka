@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.util.StdDateFormat
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 
 val spiderTopic = "spider"
-val downloadTopic = "downloads"
+val downloadTopic = "download"
 val bortTopic = "bort2"
 
 val jsonMapper = ObjectMapper().apply {

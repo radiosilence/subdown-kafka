@@ -20,8 +20,6 @@ version '1.0-SNAPSHOT'
 
 sourceCompatibility = 1.8
 
-mainClassName = 'api.Main'
-
 repositories {
     mavenCentral()
 }
@@ -35,6 +33,7 @@ dependencies {
     compile 'com.fasterxml.jackson.module:jackson-module-kotlin:2.9.6'
     compile 'org.slf4j:slf4j-api:1.7.26'
     compile 'org.slf4j:slf4j-log4j12:1.7.26'
+    runtime 'com.mashape.unirest:unirest-java:1.4.9'
 }
 
 compileKotlin {
