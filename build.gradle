@@ -33,6 +33,8 @@ dependencies {
     compile 'org.apache.kafka:kafka-clients:2.0.0'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.9.6'
     compile 'com.fasterxml.jackson.module:jackson-module-kotlin:2.9.6'
+    compile 'org.slf4j:slf4j-api:1.7.26'
+    compile 'org.slf4j:slf4j-log4j12:1.7.26'
 }
 
 compileKotlin {
