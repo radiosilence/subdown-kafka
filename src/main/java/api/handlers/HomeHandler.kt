@@ -11,6 +11,7 @@ import ratpack.handling.Context
 import ratpack.handling.Handler
 import java.util.*
 import org.apache.log4j.LogManager
+import ratpack.jackson.Jackson.json
 
 class HomeHandler(brokers: String) : Handler {
     private val logger = LogManager.getLogger(javaClass)
@@ -23,9 +24,10 @@ class HomeHandler(brokers: String) : Handler {
         return KafkaProducer<String, Bort>(props)
     }
     override fun handle(ctx: Context) {
-        val bort = Bort("bortimus prime", 1337, Date())
+        val bort = Bort("bortimus prime", 1984, Date())
         logger.info("Generated a bort: $bort")
         producer.send(ProducerRecord(bortTopic, bort))
-        ctx.render("Arse!")
+
+        ctx.render(json(bort))
     }
 }
