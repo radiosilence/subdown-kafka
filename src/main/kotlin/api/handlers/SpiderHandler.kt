@@ -17,11 +17,26 @@ class SpiderHandler(brokers: String) : Handler {
     private val logger = LogManager.getLogger(javaClass)
     private val producer = createProducer(brokers)
     override fun handle(ctx: Context) {
-        // TODO: extract these from the request
-        val spider = Spider(UUID.randomUUID(), "dogs", 1, 2, null)
-        val result = producer.send(ProducerRecord(spiderTopic, spider))
-        logger.info("Generated a $spider $result")
-        ctx.render(json(result))
+        // TODO: There must be nicer ways of writing all of this
+        val subredditString = ctx.allPathTokens["subreddits"]
+        if (subredditString == null) {
+            ctx.response.status(400).send("NO SUBREDDITS")
+        }
+
+        var maxPagesRaw = ctx.request.queryParams["maxPages"]
+        if (maxPagesRaw.isNullOrBlank()) {
+            maxPagesRaw = "1"
+        }
+
+        val subreddits = "$subredditString".split("+")
+        subreddits.forEach {
+            val spider = Spider(
+                UUID.randomUUID(), it, 1, maxPagesRaw.toInt(), null)
+                val result = producer . send (ProducerRecord(spiderTopic, spider))
+            logger.info("Generated a $spider $result")
+        }
+
+        ctx.render("Sent")
     }
 
     private fun createProducer(brokers: String): Producer<String, Spider> {

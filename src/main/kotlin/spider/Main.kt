@@ -1,5 +1,6 @@
 package spider
 
+import api.downloadTopic
 import api.spiderTopic
 import download.Download
 import download.DownloadSerializer
@@ -7,6 +8,7 @@ import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
+import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.log4j.LogManager
@@ -36,7 +38,9 @@ class SpiderProcessor(brokers: String) {
                 val spider = it.value()
                 logger.info("SPIDER! $spider")
                 try {
-                    fetchPage(spider)
+                    val page = fetchPage(spider)
+                    produceSpider(spider, page.after)
+                    produceDownloads(page.children.map { child -> child.data })
                 } catch (e: Exception) {
                     logger.error("Issues fetching spider $spider")
                     logger.error(e)
@@ -45,17 +49,41 @@ class SpiderProcessor(brokers: String) {
         }
     }
 
-    private fun fetchPage(spider: Spider) {
-        // TODO: fetches page
-        // 1. Fetch page
+    private fun fetchPage(spider: Spider): SubredditData {
+        return loadSubreddit(spider.subreddit, spider.pageNumber, spider.paginationToken).data
+    }
 
-        val response = loadSubreddit(spider.subreddit, spider.pageNumber, spider.paginationToken)
-        val paginationToken = response.data.after
-        val posts = response.data.children
-        logger.info("got me my posts $posts")
-        logger.info("got me paginationtoken $paginationToken")
-        // 2. if (pageNumber + 1) < maxPages, produce a spider for the next page
-        // 3. for each image link on page, produce a download
+    private fun sanitizeUrl(url: String): String? {
+        // TODO: Can I use when here?
+        if (url.startsWith("https://i.redd.it")) {
+            return url
+        }
+        if (url.startsWith("https://i.imgur.com")) {
+            return url
+        }
+        return null
+    }
+
+    private fun produceDownloads(links: List<Link>) {
+        val downloads = links
+            .map { Download(UUID.randomUUID(), it.id, sanitizeUrl(it.url), Date(it.created_utc.toLong())) }
+            .filter { it.url !== null }
+
+
+        downloads.forEach {
+            logger.info("sending download $it")
+            downloadProducer.send(ProducerRecord(downloadTopic, it))
+        }
+    }
+
+    private fun produceSpider(spider: Spider, paginationToken: String?) {
+        if (spider.pageNumber.toInt() >= spider.maxPages.toInt()) {
+            return
+        }
+        val nextSpider =
+            Spider(UUID.randomUUID(), spider.subreddit, spider.pageNumber.toInt() + 1, spider.maxPages, paginationToken)
+        logger.info("making new spider $nextSpider")
+        spiderProducer.send(ProducerRecord(spiderTopic, nextSpider))
     }
 
     private fun createConsumer(brokers: String): Consumer<String, Spider> {

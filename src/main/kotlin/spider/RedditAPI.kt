@@ -2,9 +2,12 @@ package spider
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Link(
-    val url: String
+    val id: String,
+    val url: String,
+    val created_utc: Number
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)

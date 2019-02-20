@@ -19,7 +19,7 @@ class Main(brokers: String) {
                 chain
                     .get(HomeHandler(brokers))
                     .get("status", StatusHandler())
-                    .get("spider", SpiderHandler(brokers))
+                    .get("r/:subreddits", SpiderHandler(brokers))
             }
         }
     }

@@ -13,6 +13,5 @@ fun loadSubreddit(subreddit: String, page: Number, paginationToken: String?): Su
             "Accept" to "application/json"
         )
     )
-    val mapper = jacksonObjectMapper()
-    return mapper.readValue(r.text)
+    return jacksonObjectMapper().readValue(r.text)
 }
