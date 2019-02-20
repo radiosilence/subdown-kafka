@@ -8,7 +8,6 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.log4j.LogManager
 import ratpack.handling.Context
 import ratpack.handling.Handler
-import ratpack.jackson.Jackson.json
 import spider.Spider
 import spider.SpiderSerializer
 import java.util.*
@@ -31,8 +30,9 @@ class SpiderHandler(brokers: String) : Handler {
         val subreddits = "$subredditString".split("+")
         subreddits.forEach {
             val spider = Spider(
-                UUID.randomUUID(), it, 1, maxPagesRaw.toInt(), null)
-                val result = producer . send (ProducerRecord(spiderTopic, spider))
+                UUID.randomUUID(), it, 1, maxPagesRaw.toInt(), null
+            )
+            val result = producer.send(ProducerRecord(spiderTopic, spider))
             logger.info("Generated a $spider $result")
         }
 

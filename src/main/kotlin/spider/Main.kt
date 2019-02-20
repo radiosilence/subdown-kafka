@@ -54,10 +54,10 @@ class SpiderProcessor(brokers: String) {
 
     private fun sanitizeUrl(url: String): String? {
         // TODO: Can I use when here?
-        when {
-            url.startsWith("https://i.redd.it") -> return url
-            url.startsWith("https://i.imgur.com") -> return url
-            else -> return null
+        return when {
+            url.startsWith("https://i.redd.it") -> url
+            url.startsWith("https://i.imgur.com") -> url
+            else -> null
         }
     }
 
