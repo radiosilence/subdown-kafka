@@ -10,6 +10,7 @@ import org.apache.kafka.clients.producer.Producer
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.log4j.LogManager
+import java.lang.Exception
 import java.time.Duration
 import java.util.*
 
@@ -28,11 +29,18 @@ class SpiderProcessor(brokers: String) {
 
         while (true) {
             val records = consumer.poll(Duration.ofSeconds(1))
-            logger.info("Received ${records.count()} spiders")
-
+            if (records.count() > 0) {
+                logger.info("Received ${records.count()} spiders")
+            }
             records.iterator().forEach {
                 val spider = it.value()
                 logger.info("SPIDER! $spider")
+                try {
+                    fetchPage(spider)
+                } catch (e: Exception) {
+                    logger.error("Issues fetching spider $spider")
+                    logger.error(e)
+                }
             }
         }
     }
@@ -40,6 +48,12 @@ class SpiderProcessor(brokers: String) {
     private fun fetchPage(spider: Spider) {
         // TODO: fetches page
         // 1. Fetch page
+
+        val response = loadSubreddit(spider.subreddit, spider.pageNumber, spider.paginationToken)
+        val paginationToken = response.data.after
+        val posts = response.data.children
+        logger.info("got me my posts $posts")
+        logger.info("got me paginationtoken $paginationToken")
         // 2. if (pageNumber + 1) < maxPages, produce a spider for the next page
         // 3. for each image link on page, produce a download
     }
