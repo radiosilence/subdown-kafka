@@ -37,6 +37,13 @@ class SpiderProcessor(brokers: String) {
         }
     }
 
+    private fun fetchPage(spider: Spider) {
+        // TODO: fetches page
+        // 1. Fetch page
+        // 2. if (pageNumber + 1) < maxPages, produce a spider for the next page
+        // 3. for each image link on page, produce a download
+    }
+
     private fun createConsumer(brokers: String): Consumer<String, Spider> {
         val props = Properties()
 

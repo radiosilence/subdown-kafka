@@ -17,7 +17,8 @@ class SpiderHandler(brokers: String) : Handler {
     private val logger = LogManager.getLogger(javaClass)
     private val producer = createProducer(brokers)
     override fun handle(ctx: Context) {
-        val spider = Spider(UUID.randomUUID(), "ShinyPorn", 0, 1, null)
+        // TODO: extract these from the request
+        val spider = Spider(UUID.randomUUID(), "dogs", 0, 1, null)
         val result = producer.send(ProducerRecord(spiderTopic, spider))
         logger.info("Generated a $spider $result")
         ctx.render(json(result))
