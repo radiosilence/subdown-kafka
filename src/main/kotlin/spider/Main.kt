@@ -12,7 +12,6 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.log4j.LogManager
-import java.lang.Exception
 import java.time.Duration
 import java.util.*
 
@@ -55,13 +54,11 @@ class SpiderProcessor(brokers: String) {
 
     private fun sanitizeUrl(url: String): String? {
         // TODO: Can I use when here?
-        if (url.startsWith("https://i.redd.it")) {
-            return url
+        when {
+            url.startsWith("https://i.redd.it") -> return url
+            url.startsWith("https://i.imgur.com") -> return url
+            else -> return null
         }
-        if (url.startsWith("https://i.imgur.com")) {
-            return url
-        }
-        return null
     }
 
     private fun produceDownloads(links: List<Link>) {
