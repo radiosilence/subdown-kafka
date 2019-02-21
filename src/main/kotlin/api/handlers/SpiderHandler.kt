@@ -22,15 +22,18 @@ class SpiderHandler(brokers: String) : Handler {
             ctx.response.status(400).send("NO SUBREDDITS")
         }
 
-        var maxPagesRaw = ctx.request.queryParams["maxPages"]
-        if (maxPagesRaw.isNullOrBlank()) {
-            maxPagesRaw = "1"
+        val maxPages = ctx.request.queryParams["maxPages"].let {
+            when {
+                it !== null && !it.isNullOrBlank() -> it.toInt()
+                else -> 1
+            }
         }
 
         val subreddits = "$subredditString".split("+")
+
         subreddits.forEach {
             val spider = Spider(
-                UUID.randomUUID(), it, 1, maxPagesRaw.toInt(), null
+                UUID.randomUUID(), it, 1, maxPages, null
             )
             val result = producer.send(ProducerRecord(spiderTopic, spider))
             logger.info("Generated a $spider $result")
