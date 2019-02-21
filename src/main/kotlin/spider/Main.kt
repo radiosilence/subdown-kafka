@@ -8,7 +8,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.Consumer
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
@@ -28,51 +27,48 @@ class Main(brokers: String) {
     private val consumer = createConsumer(brokers)
     private val spiderProducer = createSpiderProducer(brokers)
     private val downloadProducer = createDownloadProducer(brokers)
-    private val pollContext = newFixedThreadPoolContext(2, name = "kafka")
+    private val pollContext = newFixedThreadPoolContext(2, name = "poll")
 
     fun process() {
         runBlocking {
             consumer.subscribe(listOf(spiderTopic))
             while (true) {
-                logger.info(" !!!!!! POLLING !!!!!!!")
-                val records = poll(consumer, Duration.ofSeconds(10))
+                val records = poll(consumer, Duration.ofSeconds(5))
 
                 if (records.count() === 0) {
                     continue
                 }
 
-                logger.info("Received ${records.count()} spiders")
+                logger.info("${threadName()} Received ${records.count()} spiders")
                 records.iterator().forEach {
-                    println("Launching thread $it")
-                    launch {
-                        println("I'm working in thread ${Thread.currentThread().name}")
-                        processRecord(it)
-                    }
+                    launch { spider(it.value()) }
                 }
             }
         }
     }
 
     private fun poll(consumer: Consumer<String, Spider>, duration: Duration) = runBlocking(pollContext) {
+        logger.info("${threadName()} KAFKA consumer.poll")
         consumer.poll(duration)
     }
 
-    private fun processRecord(record: ConsumerRecord<String, Spider>) {
-        val spider = record.value()
-        logger.info("SPIDER! $spider")
+    private fun threadName() = "[${Thread.currentThread().name}]"
+
+    private fun spider(spider: Spider) {
+        logger.info("${threadName()} spidering: $spider")
         try {
-            logger.info(">> fetching page ${spider.pageNumber} for ${spider.subreddit}")
+            logger.info("${threadName()} >> fetching page ${spider.pageNumber} for ${spider.subreddit}")
             val page = fetchPage(spider)
             produceSpider(spider, page.after)
             produceDownloads(page.children.map { child -> child.data })
         } catch (e: Exception) {
-            logger.error("Issues fetching spider $spider")
+            logger.error("${threadName()} Issues fetching spider $spider")
             logger.error(e)
         }
     }
 
     private fun fetchPage(spider: Spider): SubredditData {
-        logger.info("<< FETCHED page ${spider.pageNumber} for ${spider.subreddit}")
+        logger.info("${threadName()} << FETCHED page ${spider.pageNumber} for ${spider.subreddit}")
         return loadSubreddit(spider.subreddit, spider.pageNumber, spider.paginationToken).data
     }
 
