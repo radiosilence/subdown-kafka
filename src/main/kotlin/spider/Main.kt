@@ -4,12 +4,11 @@ import api.downloadTopic
 import api.spiderTopic
 import download.Download
 import download.DownloadSerializer
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
@@ -29,33 +28,34 @@ class Main(brokers: String) {
     private val consumer = createConsumer(brokers)
     private val spiderProducer = createSpiderProducer(brokers)
     private val downloadProducer = createDownloadProducer(brokers)
+    private val pollContext = newFixedThreadPoolContext(2, name = "kafka")
 
     fun process() {
-        consumer.subscribe(listOf(spiderTopic))
-        while (true) {
-            logger.info(" !!!!!! POLLING !!!!!!!")
-            val records = poll(consumer)
-            if (records.count() === 0) {
-                continue
-            }
+        runBlocking {
+            consumer.subscribe(listOf(spiderTopic))
+            while (true) {
+                logger.info(" !!!!!! POLLING !!!!!!!")
+                val records = poll(consumer, Duration.ofSeconds(10))
 
-            logger.info("Received ${records.count()} spiders")
-            records.iterator().forEach {
-                println("Launching thread $it")
-                GlobalScope.launch {
-                    println("I'm working in thread ${Thread.currentThread().name}")
-                    processRecord(it)
+                if (records.count() === 0) {
+                    continue
+                }
+
+                logger.info("Received ${records.count()} spiders")
+                records.iterator().forEach {
+                    println("Launching thread $it")
+                    launch {
+                        println("I'm working in thread ${Thread.currentThread().name}")
+                        processRecord(it)
+                    }
                 }
             }
         }
     }
 
-    private fun poll(consumer: Consumer<String, Spider>): ConsumerRecords<String, Spider> {
-        return runBlocking {
-            consumer.poll(Duration.ofSeconds(1))
-        }
+    private fun poll(consumer: Consumer<String, Spider>, duration: Duration) = runBlocking(pollContext) {
+        consumer.poll(duration)
     }
-
 
     private fun processRecord(record: ConsumerRecord<String, Spider>) {
         val spider = record.value()
