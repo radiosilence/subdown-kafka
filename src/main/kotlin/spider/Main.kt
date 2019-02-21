@@ -4,6 +4,7 @@ import api.downloadTopic
 import api.spiderTopic
 import download.Download
 import download.DownloadSerializer
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.Consumer
@@ -31,25 +32,22 @@ class Main(brokers: String) {
 
     fun process() {
         consumer.subscribe(listOf(spiderTopic))
-        runBlocking {
-            while (true) {
-                logger.info(" !!!!!! POLLING !!!!!!!")
-                val records = poll(consumer)
-                if (records.count() === 0) {
-                    continue
-                }
+        while (true) {
+            logger.info(" !!!!!! POLLING !!!!!!!")
+            val records = poll(consumer)
+            if (records.count() === 0) {
+                continue
+            }
 
-                logger.info("Received ${records.count()} spiders")
-                records.iterator().forEach {
-                    println("Launching thread $it")
-                    launch {
-                        println("I'm working in thread ${Thread.currentThread().name}")
-                        processRecord(it)
-                    }
+            logger.info("Received ${records.count()} spiders")
+            records.iterator().forEach {
+                println("Launching thread $it")
+                GlobalScope.launch {
+                    println("I'm working in thread ${Thread.currentThread().name}")
+                    processRecord(it)
                 }
             }
         }
-
     }
 
     private fun poll(consumer: Consumer<String, Spider>): ConsumerRecords<String, Spider> {
