@@ -5,8 +5,6 @@ import api.spiderTopic
 import download.Download
 import download.DownloadSerializer
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -34,16 +32,11 @@ class SpiderProcessor(brokers: String) {
         consumer.subscribe(listOf(spiderTopic))
 
         while (true) {
-//            logger.info("!!!!!! POLLING !!!!!!!")
+            logger.info("!!!!!! POLLING !!!!!!!")
             val records = consumer.poll(Duration.ofSeconds(1))
             if (records.count() > 0) {
                 logger.info("Received ${records.count()} spiders")
-                GlobalScope.launch {
-                    val results = records
-                        .map { GlobalScope.async { processRecord(it) } }
-                        .awaitAll()
-                    logger.info("RESULTS: $results")
-                }
+                records.forEach { GlobalScope.launch { processRecord(it) } }
             }
         }
     }
