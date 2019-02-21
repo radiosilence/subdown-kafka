@@ -4,8 +4,8 @@ import api.downloadTopic
 import api.spiderTopic
 import download.Download
 import download.DownloadSerializer
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -29,19 +29,21 @@ class SpiderProcessor(brokers: String) {
     private val downloadProducer = createDownloadProducer(brokers)
 
     fun process() {
-        consumer.subscribe(listOf(spiderTopic))
+        runBlocking {
+            consumer.subscribe(listOf(spiderTopic))
 
-        while (true) {
-            logger.info("!!!!!! POLLING !!!!!!!")
-            val records = consumer.poll(Duration.ofSeconds(1))
-            if (records.count() > 0) {
-                logger.info("Received ${records.count()} spiders")
-                records.forEach { GlobalScope.launch { processRecord(it) } }
+            while (true) {
+                logger.info("!!!!!! POLLING !!!!!!!")
+                val records = consumer.poll(Duration.ofSeconds(1))
+                if (records.count() > 0) {
+                    logger.info("Received ${records.count()} spiders")
+                    records.forEach { launch { processRecord(it) } }
+                }
             }
         }
     }
 
-    private fun processRecord(record: ConsumerRecord<String, Spider>): Boolean {
+    private fun processRecord(record: ConsumerRecord<String, Spider>) {
         val spider = record.value()
         logger.info("SPIDER! $spider")
         try {
@@ -52,9 +54,7 @@ class SpiderProcessor(brokers: String) {
         } catch (e: Exception) {
             logger.error("Issues fetching spider $spider")
             logger.error(e)
-            return false
         }
-        return true
     }
 
     private fun fetchPage(spider: Spider): SubredditData {
@@ -63,7 +63,6 @@ class SpiderProcessor(brokers: String) {
     }
 
     private fun sanitizeUrl(url: String): String? {
-        // TODO: Can I use when here?
         return when {
             url.startsWith("https://i.redd.it") -> url
             url.startsWith("https://i.imgur.com") -> url
