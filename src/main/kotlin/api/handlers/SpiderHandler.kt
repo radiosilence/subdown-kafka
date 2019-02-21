@@ -1,5 +1,6 @@
 package api.handlers
 
+import api.responses.ErrorResponse
 import api.spiderTopic
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
@@ -8,6 +9,7 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.log4j.LogManager
 import ratpack.handling.Context
 import ratpack.handling.Handler
+import ratpack.jackson.Jackson.json
 import spider.Spider
 import spider.SpiderSerializer
 import java.util.*
@@ -16,22 +18,15 @@ class SpiderHandler(brokers: String) : Handler {
     private val logger = LogManager.getLogger(javaClass)
     private val producer = createProducer(brokers)
     override fun handle(ctx: Context) {
-        // TODO: There must be nicer ways of writing all of this
-        val subredditString = ctx.allPathTokens["subreddits"]
-        if (subredditString == null) {
-            ctx.response.status(400).send("NO SUBREDDITS")
+        // TODO: There must be a more idiomatic way of writing all of this
+        val maxPages = ctx.request.queryParams.getOrDefault("maxPages", "1").toIntOrNull()
+
+        if (maxPages === null) {
+            ctx.response.status(400)
+            return ctx.render(json(ErrorResponse("Bad maxPages")))
         }
 
-        val maxPages = ctx.request.queryParams["maxPages"].let {
-            when {
-                it !== null && !it.isNullOrBlank() -> it.toInt()
-                else -> 1
-            }
-        }
-
-        val subreddits = "$subredditString".split("+")
-
-        subreddits.forEach {
+        ctx.allPathTokens["subreddits"]?.split("+")?.forEach {
             val spider = Spider(
                 UUID.randomUUID(), it, 1, maxPages, null
             )
