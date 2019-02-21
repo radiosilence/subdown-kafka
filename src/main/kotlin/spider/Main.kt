@@ -4,7 +4,12 @@ import api.downloadTopic
 import api.spiderTopic
 import download.Download
 import download.DownloadSerializer
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import org.apache.kafka.clients.consumer.Consumer
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
@@ -29,26 +34,38 @@ class SpiderProcessor(brokers: String) {
         consumer.subscribe(listOf(spiderTopic))
 
         while (true) {
+//            logger.info("!!!!!! POLLING !!!!!!!")
             val records = consumer.poll(Duration.ofSeconds(1))
             if (records.count() > 0) {
                 logger.info("Received ${records.count()} spiders")
-            }
-            records.iterator().forEach {
-                val spider = it.value()
-                logger.info("SPIDER! $spider")
-                try {
-                    val page = fetchPage(spider)
-                    produceSpider(spider, page.after)
-                    produceDownloads(page.children.map { child -> child.data })
-                } catch (e: Exception) {
-                    logger.error("Issues fetching spider $spider")
-                    logger.error(e)
+                GlobalScope.launch {
+                    val results = records
+                        .map { GlobalScope.async { processRecord(it) } }
+                        .awaitAll()
+                    logger.info("RESULTS: $results")
                 }
             }
         }
     }
 
+    private fun processRecord(record: ConsumerRecord<String, Spider>): Boolean {
+        val spider = record.value()
+        logger.info("SPIDER! $spider")
+        try {
+            logger.info(">> fetching page ${spider.pageNumber} for ${spider.subreddit}")
+            val page = fetchPage(spider)
+            produceSpider(spider, page.after)
+            produceDownloads(page.children.map { child -> child.data })
+        } catch (e: Exception) {
+            logger.error("Issues fetching spider $spider")
+            logger.error(e)
+            return false
+        }
+        return true
+    }
+
     private fun fetchPage(spider: Spider): SubredditData {
+        logger.info("<< FETCHED page ${spider.pageNumber} for ${spider.subreddit}")
         return loadSubreddit(spider.subreddit, spider.pageNumber, spider.paginationToken).data
     }
 
