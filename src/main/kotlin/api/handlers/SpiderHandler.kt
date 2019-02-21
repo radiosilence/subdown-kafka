@@ -27,9 +27,7 @@ class SpiderHandler(brokers: String) : Handler {
         }
 
         ctx.allPathTokens["subreddits"]?.split("+")?.forEach {
-            val spider = Spider(
-                UUID.randomUUID(), it, 1, maxPages, null
-            )
+            val spider = Spider(UUID.randomUUID(), it, 1, maxPages, null)
             val result = producer.send(ProducerRecord(spiderTopic, spider))
             logger.info("Generated a $spider $result")
         }

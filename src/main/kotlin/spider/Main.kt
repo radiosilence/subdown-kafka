@@ -8,6 +8,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.Producer
@@ -18,30 +19,45 @@ import org.apache.log4j.LogManager
 import java.time.Duration
 import java.util.*
 
-fun main(args: Array<String>) {
-    SpiderProcessor("localhost:9092").process()
+fun main() {
+    Main("localhost:9092").process()
 }
 
-class SpiderProcessor(brokers: String) {
+class Main(brokers: String) {
     private val logger = LogManager.getLogger(javaClass)
     private val consumer = createConsumer(brokers)
     private val spiderProducer = createSpiderProducer(brokers)
     private val downloadProducer = createDownloadProducer(brokers)
 
     fun process() {
+        consumer.subscribe(listOf(spiderTopic))
         runBlocking {
-            consumer.subscribe(listOf(spiderTopic))
-
             while (true) {
-                logger.info("!!!!!! POLLING !!!!!!!")
-                val records = consumer.poll(Duration.ofSeconds(1))
-                if (records.count() > 0) {
-                    logger.info("Received ${records.count()} spiders")
-                    records.forEach { launch { processRecord(it) } }
+                logger.info(" !!!!!! POLLING !!!!!!!")
+                val records = poll(consumer)
+                if (records.count() === 0) {
+                    continue
+                }
+
+                logger.info("Received ${records.count()} spiders")
+                records.iterator().forEach {
+                    println("Launching thread $it")
+                    launch {
+                        println("I'm working in thread ${Thread.currentThread().name}")
+                        processRecord(it)
+                    }
                 }
             }
         }
+
     }
+
+    private fun poll(consumer: Consumer<String, Spider>): ConsumerRecords<String, Spider> {
+        return runBlocking {
+            consumer.poll(Duration.ofSeconds(1))
+        }
+    }
+
 
     private fun processRecord(record: ConsumerRecord<String, Spider>) {
         val spider = record.value()
@@ -83,9 +99,7 @@ class SpiderProcessor(brokers: String) {
     }
 
     private fun produceSpider(spider: Spider, paginationToken: String?) {
-        if (spider.pageNumber.toInt() >= spider.maxPages.toInt()) {
-            return
-        }
+        if (spider.pageNumber.toInt() >= spider.maxPages.toInt()) return
         val nextSpider =
             Spider(UUID.randomUUID(), spider.subreddit, spider.pageNumber.toInt() + 1, spider.maxPages, paginationToken)
         logger.info("making new spider $nextSpider")
