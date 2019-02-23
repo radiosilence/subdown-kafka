@@ -29,12 +29,13 @@ class Main(brokers: String) {
     private val consumer = createConsumer(brokers)
     private val spiderProducer = createSpiderProducer(brokers)
     private val downloadProducer = createDownloadProducer(brokers)
-    private val es = Executors.newSingleThreadExecutor()
+    private val pollEs = Executors.newSingleThreadExecutor()
+    private val recordsEs = Executors.newCachedThreadPool()
 
-    fun process() = runBlocking {
+    fun process() = runBlocking(recordsEs.asCoroutineDispatcher()) {
         consumer.subscribe(listOf(spiderTopic))
         while (true) {
-            val records = poll(consumer, Duration.ofSeconds(5))
+            val records = poll(consumer, Duration.ofSeconds(1))
             val count = records.count()
             if (count == 0) {
                 continue
@@ -49,7 +50,8 @@ class Main(brokers: String) {
     }
 
     @ObsoleteCoroutinesApi
-    private fun poll(consumer: Consumer<String, Spider>, duration: Duration) = runBlocking(es.asCoroutineDispatcher()) {
+    private fun poll(consumer: Consumer<String, Spider>, duration: Duration) =
+        runBlocking(pollEs.asCoroutineDispatcher()) {
         logger.info("${threadName()} KAFKA consumer.poll")
         consumer.poll(duration)
     }
@@ -71,7 +73,7 @@ class Main(brokers: String) {
 
     private fun fetchPage(spider: Spider): SubredditData {
         logger.info("${threadName()} << FETCHED page ${spider.pageNumber} for ${spider.subreddit}")
-        return loadSubreddit(spider.subreddit, spider.pageNumber, spider.paginationToken).data
+        return Subreddit().loadSubreddit(spider.subreddit, spider.pageNumber, spider.paginationToken).data
     }
 
     private fun sanitizeUrl(url: String): String? {
