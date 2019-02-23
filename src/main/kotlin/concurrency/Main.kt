@@ -1,16 +1,17 @@
 package concurrency
 
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.Executors
 
 fun main() {
     Main().process()
 }
 
 class Main {
-    private val processContext = newFixedThreadPoolContext(4, name = "test")
+    private val es = Executors.newSingleThreadExecutor()
 
     fun process() {
 
@@ -33,7 +34,7 @@ class Main {
         }
     }
 
-    private fun execute() = runBlocking(processContext) {
+    private fun execute() = runBlocking(es.asCoroutineDispatcher()) {
         Thread.sleep(1000) // simulating a slow command
         1
     }
