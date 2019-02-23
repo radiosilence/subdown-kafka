@@ -4,10 +4,7 @@ import api.downloadTopic
 import api.spiderTopic
 import download.Download
 import download.DownloadSerializer
-import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -29,10 +26,10 @@ class Main(brokers: String) {
     private val consumer = createConsumer(brokers)
     private val spiderProducer = createSpiderProducer(brokers)
     private val downloadProducer = createDownloadProducer(brokers)
-    private val pollEs = Executors.newSingleThreadExecutor()
-    private val recordsEs = Executors.newCachedThreadPool()
+    private val pollEs = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    private val recordsEs = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
 
-    fun process() = runBlocking(recordsEs.asCoroutineDispatcher()) {
+    suspend fun process() = withContext(recordsEs) {
         consumer.subscribe(listOf(spiderTopic))
         while (true) {
             val records = poll(consumer, Duration.ofSeconds(1))
@@ -43,15 +40,15 @@ class Main(brokers: String) {
 
             logger.info("${threadName()} Received $count spiders")
             records.iterator().forEach {
-                launch { spider(it.value()) }
+                async { spider(it.value()) }
             }
         }
 
     }
 
     @ObsoleteCoroutinesApi
-    private fun poll(consumer: Consumer<String, Spider>, duration: Duration) =
-        runBlocking(pollEs.asCoroutineDispatcher()) {
+    private suspend fun poll(consumer: Consumer<String, Spider>, duration: Duration) =
+        withContext(pollEs) {
         logger.info("${threadName()} KAFKA consumer.poll")
         consumer.poll(duration)
     }

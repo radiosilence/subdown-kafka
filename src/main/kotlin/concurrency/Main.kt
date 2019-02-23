@@ -1,9 +1,6 @@
 package concurrency
 
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import java.util.concurrent.Executors
 
 fun main() {
@@ -11,19 +8,17 @@ fun main() {
 }
 
 class Main {
-    private val es = Executors.newSingleThreadExecutor()
+    private val es = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
 
-    fun process() {
-
-        runBlocking {
+    fun process() = runBlocking {
             delay(2000)
             println("FIRST")
             while (true) {
                 println("LOOP")// simulating kafka consumer.poll(... )
-                launch {
+                async {
                     println("INNER THING")
                 }
-                launch {
+                async {
                     delay(500)
                     println("INNER THING")
                 }
@@ -31,11 +26,10 @@ class Main {
 
                 println("Block result $blockResult")
             }
-        }
     }
 
-    private fun execute() = runBlocking(es.asCoroutineDispatcher()) {
-        Thread.sleep(1000) // simulating a slow command
+    private suspend fun execute() = withContext(es) {
+        Thread.sleep(1000) // simulating a slow blocking command
         1
     }
 }
